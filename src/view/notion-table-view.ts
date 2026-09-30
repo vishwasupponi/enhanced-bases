@@ -1070,7 +1070,7 @@ export class NotionTableView extends BasesView {
 			});
 		} else {
 			const emptyBtn = titleWrap.createSpan({ cls: 'ntn-toggle-btn' });
-			emptyBtn.style.opacity = '0';
+			emptyBtn.setCssStyles({ opacity: '0' });
 		}
 
 		titleWrap.createSpan({ cls: 'ntn-page-icon', text: '📄' });

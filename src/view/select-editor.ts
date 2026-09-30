@@ -346,8 +346,10 @@ export class SelectEditor {
 		
 		const previewWrap = wheelSec.createDiv({ cls: 'ntn-color-preview-wrap' });
 		const previewPill = previewWrap.createSpan({ cls: 'ntn-pill', text: value });
-		previewPill.style.setProperty('background-color', '#2563eb', 'important');
-		previewPill.style.setProperty('color', '#ffffff', 'important');
+		previewPill.setCssStyles({
+			backgroundColor: '#2563eb',
+			color: '#ffffff',
+		});
 
 		// Place colorInput directly inside previewWrap for perfect center alignment
 		const colorInput = previewWrap.createEl('input', {

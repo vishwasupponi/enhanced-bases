@@ -818,8 +818,10 @@ var SelectEditor = class {
     wheelSec.createDiv({ cls: "ntn-color-title", text: "Custom Color Wheel" });
     const previewWrap = wheelSec.createDiv({ cls: "ntn-color-preview-wrap" });
     const previewPill = previewWrap.createSpan({ cls: "ntn-pill", text: value });
-    previewPill.style.setProperty("background-color", "#2563eb", "important");
-    previewPill.style.setProperty("color", "#ffffff", "important");
+    previewPill.setCssStyles({
+      backgroundColor: "#2563eb",
+      color: "#ffffff"
+    });
     const colorInput = previewWrap.createEl("input", {
       type: "color",
       cls: "ntn-color-wheel-input",
@@ -1781,7 +1783,7 @@ var NotionTableView = class extends import_obsidian4.BasesView {
       });
     } else {
       const emptyBtn = titleWrap.createSpan({ cls: "ntn-toggle-btn" });
-      emptyBtn.style.opacity = "0";
+      emptyBtn.setCssStyles({ opacity: "0" });
     }
     titleWrap.createSpan({ cls: "ntn-page-icon", text: "\u{1F4C4}" });
     const link = titleWrap.createSpan({
