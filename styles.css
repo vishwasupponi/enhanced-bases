@@ -35,9 +35,9 @@
    .markdown-rendered, where Obsidian's and themes' `table` rules
    (e.g. `.markdown-rendered table { width: 100% }`) outrank a bare class
    selector and re-crush the columns. (0,3,0) outranks them by specificity
-   alone — don't simplify it back or reach for !important (community CSS
+   alone — don't simplify it back or reach for (community CSS
    lint); if a theme still wins, add MORE specificity. */
-.ntn-root .ntn-table.ntn-table {
+.ntn-root .ntn-table.ntn-root .ntn-table {
 	border-collapse: collapse;
 	display: table;
 	table-layout: auto;
@@ -48,7 +48,7 @@
 	margin: 0;
 }
 
-.ntn-root .ntn-th {
+.ntn-root .ntn-root .ntn-th {
 	font-weight: 400;
 	font-size: 14px;
 	color: var(--ntn-text-muted);
@@ -65,10 +65,10 @@
    headers with a light background, which looks wrong in dark mode. Keep the
    header transparent so it follows the page background, like Notion. The
    doubled class / thead selectors out-rank those theme rules by specificity
-   (see bug history #4) — don't reach for !important. */
+   (see bug history #4) — don't reach for. */
 .ntn-root .ntn-table thead,
 .ntn-root .ntn-table thead tr,
-.ntn-root .ntn-th.ntn-th {
+.ntn-root .ntn-th.ntn-root .ntn-th {
 	background: transparent;
 }
 
@@ -77,7 +77,7 @@
    th/td padding (often padding-inline) out-ranks the base rules above and
    shifts columns to the right. The doubled class wins by specificity
    (see bug history #4) — keep the values in sync with .ntn-th / .ntn-td. */
-.ntn-root .ntn-th.ntn-th {
+.ntn-root .ntn-th.ntn-root .ntn-th {
 	padding-left: 8px;
 	padding-right: 8px;
 	/* .ntn-th has no vertical-align by default; reading mode's
@@ -132,7 +132,7 @@
    the cell truncates with ellipsis. Scoped so "Wrap cell content"
    (.ntn-wrap) can still wrap, but never break inside words. The doubled
    .ntn-cell out-ranks core/theme rules on rendered content (external
-   links use break-all) by specificity — no !important (see bug
+   links use break-all) by specificity — no (see bug
    history #4). */
 .ntn-root:not(.ntn-wrap) .ntn-cell.ntn-cell,
 .ntn-root:not(.ntn-wrap) .ntn-cell.ntn-cell * {
@@ -258,21 +258,21 @@
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
-	background-color: var(--ntn-pill-bg-dark, var(--ntn-pill-bg-light, #454B4E)) !important;
-	color: var(--ntn-pill-fg-dark, var(--ntn-pill-fg-light, #ffffff)) !important;
+	background-color: var(--ntn-pill-bg-dark, var(--ntn-pill-bg-light, #454B4E));
+	color: var(--ntn-pill-fg-dark, var(--ntn-pill-fg-light, #ffffff));
 }
 
 .theme-dark .ntn-pill {
-	background-color: var(--ntn-pill-bg-dark, var(--ntn-pill-bg-light, #454B4E)) !important;
-	color: var(--ntn-pill-fg-dark, var(--ntn-pill-fg-light, #ffffff)) !important;
+	background-color: var(--ntn-pill-bg-dark, var(--ntn-pill-bg-light, #454B4E));
+	color: var(--ntn-pill-fg-dark, var(--ntn-pill-fg-light, #ffffff));
 }
 
-.ntn-select-menu {
-	width: 380px !important;
-	max-width: 90vw !important;
+.ntn-root.ntn-select-menu {
+	width: 380px;
+	max-width: 90vw;
 }
 
-.ntn-select-path-hint {
+.ntn-root .ntn-select-path-hint {
 	font-size: 11px;
 	color: var(--text-muted);
 	margin-left: 8px;
@@ -372,7 +372,7 @@
 
 /* ---------------- Select editor (floating menu) ---------------- */
 
-.ntn-select-menu {
+.ntn-root.ntn-select-menu {
 	position: fixed;
 	z-index: var(--layer-menu, 30);
 	background: var(--background-primary);
@@ -451,7 +451,7 @@
 	padding: 4px;
 }
 
-.ntn-select-option {
+.ntn-root .ntn-select-option {
 	display: flex;
 	align-items: center;
 	gap: 8px;
@@ -509,19 +509,7 @@
 }
 
 /* Color picker flyout (sibling popover anchored to the color button). */
-.ntn-color-menu {
-	position: fixed;
-	z-index: var(--layer-menu, 30);
-	background: var(--background-primary);
-	border-radius: 8px;
-	box-shadow: rgba(15, 15, 15, 0.05) 0 0 0 1px,
-		rgba(15, 15, 15, 0.1) 0 3px 6px,
-		rgba(15, 15, 15, 0.2) 0 9px 24px;
-	padding: 4px;
-	min-width: 150px;
-	max-height: 280px;
-	overflow-y: auto;
-}
+/* Obsolete .ntn-color-menu removed */
 
 .ntn-color-option {
 	display: flex;
@@ -573,7 +561,7 @@
 /* The panel is an Obsidian Modal, so it lives outside .ntn-root and carries
    its own copy of the Notion text tokens (same values as .ntn-root). The
    .modal class is doubled in so the size overrides outrank core's .modal
-   width/max-width without !important. */
+   width/max-width without. */
 .modal.ntn-page-modal {
 	--ntn-text: rgb(55, 53, 47);
 	--ntn-text-muted: rgba(55, 53, 47, 0.65);
@@ -843,7 +831,7 @@
 
 
 /* ---- Fixed Color Menu & Vibrant Preset Grid ---- */
-.ntn-color-menu {
+.ntn-root.ntn-color-menu {
 	position: fixed;
 	z-index: var(--layer-menu, 30);
 	background: var(--background-primary);
@@ -852,9 +840,9 @@
 		rgba(15, 15, 15, 0.15) 0 4px 12px,
 		rgba(15, 15, 15, 0.25) 0 12px 28px;
 	padding: 12px;
-	width: 280px !important;
-	min-width: 280px !important;
-	max-width: 320px !important;
+	width: 280px;
+	min-width: 280px;
+	max-width: 320px;
 	max-height: 420px;
 	overflow-y: auto;
 	overflow-x: hidden;
@@ -915,14 +903,14 @@
 	margin-top: 4px;
 }
 
-.ntn-preset-grid {
+.ntn-root .ntn-preset-grid {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 6px;
 	margin-top: 6px;
 }
 
-.ntn-preset-pill {
+.ntn-root .ntn-preset-pill {
 	cursor: pointer;
 	font-size: 12px;
 	padding: 4px 9px;
@@ -949,8 +937,8 @@
 }
 
 
-.ntn-root .ntn-th {
-	position: relative !important;
+.ntn-root .ntn-root .ntn-th {
+	position: sticky;
 	min-width: 100px;
 }
 
@@ -971,8 +959,25 @@
 }
 
 
-/* Centered Color Wheel & Preview Pill with vertical gap */
-.ntn-color-preview-wrap {
+/* Duplicate preview wrap removed */
+
+.ntn-root .ntn-select-dots {
+	margin-left: 6px;
+	cursor: pointer;
+	color: var(--ntn-text-muted);
+	font-size: 12px;
+	padding: 2px 4px;
+	border-radius: 3px;
+}
+
+.ntn-root .ntn-select-dots:hover {
+	background-color: var(--ntn-hover);
+	color: var(--ntn-text);
+}
+
+
+/* Centered Color Wheel & Preview Pill with 12px vertical gap */
+.ntn-root .ntn-color-preview-wrap {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
@@ -982,80 +987,44 @@
 	width: 100%;
 }
 
-.ntn-color-wheel-input {
-	width: 36px;
-	height: 36px;
+.ntn-root .ntn-color-wheel-input {
+	display: block;
+	margin: 0 auto;
+	width: 38px;
+	height: 38px;
 	border-radius: 50%;
 	border: 2px solid var(--ntn-border);
 	cursor: pointer;
 	padding: 0;
 	background: transparent;
-}
-
-.ntn-select-dots {
-	margin-left: 6px;
-	cursor: pointer;
-	color: var(--ntn-text-muted);
-	font-size: 12px;
-	padding: 2px 4px;
-	border-radius: 3px;
-}
-
-.ntn-select-dots:hover {
-	background-color: var(--ntn-hover);
-	color: var(--ntn-text);
-}
-
-
-/* Centered Color Wheel & Preview Pill with 12px vertical gap */
-.ntn-color-preview-wrap {
-	display: flex !important;
-	flex-direction: column !important;
-	align-items: center !important;
-	justify-content: center !important;
-	gap: 12px !important;
-	margin: 10px 0 14px 0 !important;
-	width: 100% !important;
-}
-
-.ntn-color-wheel-input {
-	display: block !important;
-	margin: 0 auto !important;
-	width: 38px !important;
-	height: 38px !important;
-	border-radius: 50% !important;
-	border: 2px solid var(--ntn-border) !important;
-	cursor: pointer !important;
-	padding: 0 !important;
-	background: transparent !important;
-	outline: none !important;
+	outline: none;
 }
 
 /* Strict 2-Column Grid Setup for Presets */
-.ntn-preset-grid {
-	display: grid !important;
-	grid-template-columns: repeat(2, 1fr) !important;
-	gap: 8px !important;
-	margin-top: 8px !important;
-	width: 100% !important;
-	box-sizing: border-box !important;
+.ntn-root .ntn-preset-grid {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 8px;
+	margin-top: 8px;
+	width: 100%;
+	box-sizing: border-box;
 }
 
-.ntn-preset-pill {
-	display: flex !important;
-	align-items: center !important;
-	justify-content: center !important;
-	text-align: center !important;
-	cursor: pointer !important;
-	font-size: 12px !important;
-	font-weight: 500 !important;
-	padding: 6px 8px !important;
-	border-radius: 5px !important;
-	white-space: nowrap !important;
-	width: 100% !important;
-	box-sizing: border-box !important;
-	overflow: hidden !important;
-	text-overflow: ellipsis !important;
+.ntn-root .ntn-preset-pill {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+	cursor: pointer;
+	font-size: 12px;
+	font-weight: 500;
+	padding: 6px 8px;
+	border-radius: 5px;
+	white-space: nowrap;
+	width: 100%;
+	box-sizing: border-box;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 
@@ -1158,8 +1127,8 @@
 }
 
 .ntn-picker-day.selected {
-	background: var(--interactive-accent, #3b82f6) !important;
-	color: #ffffff !important;
+	background: var(--interactive-accent, #3b82f6);
+	color: #ffffff;
 	font-weight: 600;
 }
 
@@ -1228,8 +1197,8 @@
 }
 
 .ntn-time-cell.selected {
-	background: var(--interactive-accent, #3b82f6) !important;
-	color: #ffffff !important;
+	background: var(--interactive-accent, #3b82f6);
+	color: #ffffff;
 	font-weight: 600;
 }
 
@@ -1274,9 +1243,9 @@
 }
 
 .ntn-my-btn.selected {
-	background: var(--interactive-accent, #3b82f6) !important;
-	color: #ffffff !important;
-	border-color: transparent !important;
+	background: var(--interactive-accent, #3b82f6);
+	color: #ffffff;
+	border-color: transparent;
 }
 
 
@@ -1307,9 +1276,9 @@
 }
 
 .ntn-my-year-btn.selected {
-	background: var(--interactive-accent, #3b82f6) !important;
-	color: #ffffff !important;
-	border-color: transparent !important;
+	background: var(--interactive-accent, #3b82f6);
+	color: #ffffff;
+	border-color: transparent;
 	font-weight: 600;
 }
 
@@ -1337,7 +1306,7 @@
 }
 
 /* Select Editor Folder Path Sub-label */
-.ntn-select-path-hint {
+.ntn-root .ntn-select-path-hint {
 	font-size: 11px;
 	color: var(--text-muted);
 	margin-left: 8px;
@@ -1349,29 +1318,29 @@
 
 
 /* Select Option Rows: Pin 3-Dot Menu Button to Far Right Side */
-.ntn-select-option {
-	display: flex !important;
-	align-items: center !important;
-	gap: 6px !important;
+.ntn-root .ntn-select-option {
+	display: flex;
+	align-items: center;
+	gap: 6px;
 }
 
-.ntn-select-path-hint {
-	flex: 1 1 auto !important;
-	min-width: 0 !important;
-	margin-right: 8px !important;
+.ntn-root .ntn-select-path-hint {
+	flex: 1 1 auto;
+	min-width: 0;
+	margin-right: 8px;
 }
 
-.ntn-select-dots {
-	margin-left: auto !important;
-	flex-shrink: 0 !important;
-	padding: 2px 4px !important;
-	border-radius: 3px !important;
-	opacity: 0.7 !important;
+.ntn-root .ntn-select-dots {
+	margin-left: auto;
+	flex-shrink: 0;
+	padding: 2px 4px;
+	border-radius: 3px;
+	opacity: 0.7;
 }
 
-.ntn-select-dots:hover {
-	opacity: 1 !important;
-	background: var(--ntn-hover) !important;
+.ntn-root .ntn-select-dots:hover {
+	opacity: 1;
+	background: var(--ntn-hover);
 }
 
 
@@ -1385,37 +1354,37 @@
 	cursor: grabbing;
 }
 
-.ntn-th.ntn-dragging {
+.ntn-root .ntn-th.ntn-dragging {
 	opacity: 0.45;
-	background: var(--ntn-hover) !important;
+	background: var(--ntn-hover);
 }
 
-.ntn-th.ntn-drag-over {
-	border-left: 3px solid var(--interactive-accent) !important;
-	background: var(--ntn-hover) !important;
+.ntn-root .ntn-th.ntn-drag-over {
+	border-left: 3px solid var(--interactive-accent);
+	background: var(--ntn-hover);
 }
 /* 12:14 AM Layout & Sorting Updates */
-.ntn-table {
-	table-layout: fixed !important;
-	width: max-content !important;
-	min-width: unset !important;
-	border-collapse: separate !important;
-	border-spacing: 0 !important;
+.ntn-root .ntn-table {
+	table-layout: fixed;
+	width: max-content;
+	min-width: unset;
+	border-collapse: separate;
+	border-spacing: 0;
 }
 
-.ntn-table thead {
-	position: sticky !important;
-	top: 0 !important;
-	z-index: 30 !important;
-	background: var(--background-primary) !important;
+.ntn-root .ntn-table thead {
+	position: sticky;
+	top: 0;
+	z-index: 30;
+	background: var(--background-primary);
 }
 
-.ntn-th {
-	position: sticky !important;
-	top: 0 !important;
-	z-index: 30 !important;
-	background: var(--background-primary) !important;
-	box-shadow: 0 1px 0 var(--ntn-border) !important;
+.ntn-root .ntn-th {
+	position: sticky;
+	top: 0;
+	z-index: 30;
+	background: var(--background-primary);
+	box-shadow: 0 1px 0 var(--ntn-border);
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
@@ -1445,6 +1414,6 @@
 }
 
 /* Fix 2: Ensure table wrapper allows sticky headers to freeze against its top */
-.ntn-table {
-	margin-right: auto !important; /* Helps ensure padding-right on root is respected */
+.ntn-root .ntn-table {
+	margin-right: auto; /* Helps ensure padding-right on root is respected */
 }
