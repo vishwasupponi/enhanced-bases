@@ -1,0 +1,9 @@
+{
+	"id": "enhanced-bases",
+	"name": "Enhanced Bases",
+	"version": "1.0.0",
+	"minAppVersion": "1.10.0",
+	"description": "Original GoodBases Enhanced",
+	"author": "UmbertoFrancesco (Enhanced by Vishwas Upponi)",
+	"isDesktopOnly": false
+}

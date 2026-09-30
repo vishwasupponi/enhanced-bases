@@ -1,0 +1,27 @@
+{
+  "name": "enhanced-bases",
+  "version": "1.0.0",
+  "description": "Original GoodBases Enhanced",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "node esbuild.config.mjs production"
+  },
+  "keywords": [
+    "obsidian",
+    "obsidian-plugin",
+    "bases",
+    "notion",
+    "table",
+    "hierarchy"
+  ],
+  "author": "UmbertoFrancesco (Enhanced by Vishwas Upponi)",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "esbuild": "^0.20.0",
+    "obsidian": "latest",
+    "tslib": "^2.6.2",
+    "typescript": "^5.3.3"
+  }
+}
