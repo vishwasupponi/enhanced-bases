@@ -929,7 +929,7 @@ export class NotionTableView extends BasesView {
 				const fromProp = this.draggedProp || (evt.dataTransfer ? evt.dataTransfer.getData('text/plain') as BasesPropertyId : null);
 				const toProp = prop;
 				if (fromProp && toProp && fromProp !== toProp) {
-					const fromIdx = displayProps.indexOf(fromProp as BasesPropertyId);
+					const fromIdx = displayProps.indexOf(fromProp);
 					const toIdx = displayProps.indexOf(toProp);
 					if (fromIdx !== -1 && toIdx !== -1) {
 						const updated = [...displayProps];
