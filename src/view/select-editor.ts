@@ -10,13 +10,12 @@
  * objects, so it survives the view's `onDataUpdated` re-renders. The owning
  * view drives lifetime — outside-click and unload both call {@link close}.
  */
-import { BasesEntry, BasesPropertyId, TFile } from 'obsidian';
-import { NOTION_COLORS, applyColorVars } from '../lib/colors';
+import { App, BasesEntry, BasesPropertyId, TFile } from 'obsidian';
 import { valueToStrings } from '../lib/values';
 
 function cleanText(val: string): string {
 	if (!val) return '';
-	return val.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, target, alias) => {
+	return val.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_: string, target: string, alias?: string): string => {
 		if (alias && alias.trim()) return alias.trim();
 		const t = target.trim();
 		const lastSlash = t.lastIndexOf('/');
@@ -25,8 +24,6 @@ function cleanText(val: string): string {
 		return name;
 	});
 }
-
-import { App } from 'obsidian';
 
 export interface SelectEditorDeps {
 	/** The Obsidian App instance to query vault files. */
@@ -312,8 +309,12 @@ export class SelectEditor {
 			this.close();
 		} else if (evt.key === 'Enter') {
 			const q = this.input.value.trim();
-			if (q) this.pick(this.known.get(q.toLowerCase()) ?? q);
-			else this.close();
+			if (q) {
+				const match = this.columnOptions.get(q.toLowerCase()) ?? this.vaultOptions.get(q.toLowerCase()) ?? q;
+				this.pick(match);
+			} else {
+				this.close();
+			}
 		} else if (
 			evt.key === 'Backspace' &&
 			this.input.value === '' &&

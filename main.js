@@ -792,10 +792,12 @@ var SelectEditor = class {
       this.close();
     } else if (evt.key === "Enter") {
       const q = this.input.value.trim();
-      if (q)
-        this.pick(this.known.get(q.toLowerCase()) ?? q);
-      else
+      if (q) {
+        const match = this.columnOptions.get(q.toLowerCase()) ?? this.vaultOptions.get(q.toLowerCase()) ?? q;
+        this.pick(match);
+      } else {
         this.close();
+      }
     } else if (evt.key === "Backspace" && this.input.value === "" && this.deps.isList && this.selected.length) {
       this.selected = this.selected.slice(0, -1);
       this.write();
@@ -945,19 +947,21 @@ function extractRawDateString(value) {
     res = value.trim();
   else if (value instanceof Date) {
     res = formatDateObject(value);
-  } else {
+  } else if (typeof value === "object" && value !== null) {
     const obj = value;
-    if (obj.value) {
-      if (typeof obj.value === "string")
-        res = obj.value.trim();
-      else if (obj.value instanceof Date) {
-        res = formatDateObject(obj.value);
+    const valProp = obj["value"];
+    const dateProp = obj["date"];
+    if (valProp) {
+      if (typeof valProp === "string")
+        res = valProp.trim();
+      else if (valProp instanceof Date) {
+        res = formatDateObject(valProp);
       }
-    } else if (obj.date) {
-      if (typeof obj.date === "string")
-        res = obj.date.trim();
-      else if (obj.date instanceof Date) {
-        res = formatDateObject(obj.date);
+    } else if (dateProp) {
+      if (typeof dateProp === "string")
+        res = dateProp.trim();
+      else if (dateProp instanceof Date) {
+        res = formatDateObject(dateProp);
       }
     } else if (typeof obj.toString === "function") {
       const s = obj.toString().trim();
@@ -966,13 +970,22 @@ function extractRawDateString(value) {
     } else {
       res = String(value).trim();
     }
+  } else {
+    res = String(value).trim();
   }
   return res === "null" || res === "undefined" ? "" : res;
 }
 function cleanWikilinkTitle(val) {
   if (!val)
     return "";
-  const str = typeof val === "string" ? val : val.toString ? val.toString() : String(val);
+  let str = "";
+  if (typeof val === "string") {
+    str = val;
+  } else if (typeof val === "object" && val !== null && "toString" in val && typeof val.toString === "function") {
+    str = val.toString();
+  } else {
+    str = String(val);
+  }
   if (!str)
     return "";
   return str.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, target, alias) => {
@@ -1175,7 +1188,7 @@ var ObsidianNativeDatePicker = class {
         });
       }
       if (selectedYearEl) {
-        setTimeout(() => selectedYearEl?.scrollIntoView({ block: "center", behavior: "smooth" }), 30);
+        window.setTimeout(() => selectedYearEl?.scrollIntoView({ block: "center", behavior: "smooth" }), 30);
       }
     } else {
       const daysHead = left.createDiv({ cls: "ntn-picker-days-header" });
@@ -1276,19 +1289,19 @@ var ObsidianNativeDatePicker = class {
         this.close();
       }
     };
-    setTimeout(() => {
+    window.setTimeout(() => {
       this.doc.addEventListener("mousedown", onOutside);
       this.doc.addEventListener("keydown", onKeydown);
     }, 50);
-    this._onOutside = onOutside;
-    this._onKeydown = onKeydown;
+    this.onOutsideHandler = onOutside;
+    this.onKeydownHandler = onKeydown;
   }
   close() {
     if (this.popover) {
-      if (this._onOutside)
-        this.doc.removeEventListener("mousedown", this._onOutside);
-      if (this._onKeydown)
-        this.doc.removeEventListener("keydown", this._onKeydown);
+      if (this.onOutsideHandler)
+        this.doc.removeEventListener("mousedown", this.onOutsideHandler);
+      if (this.onKeydownHandler)
+        this.doc.removeEventListener("keydown", this.onKeydownHandler);
       this.popover.remove();
     }
   }
@@ -1302,6 +1315,13 @@ var NotionTableView = class extends import_obsidian4.BasesView {
     this.type = NOTION_TABLE_VIEW;
     /** True while the toolbar's New button is rerouted to the page panel. */
     this.newButtonPatched = false;
+    this.selectEditor = null;
+    this.pills = { pillProps: /* @__PURE__ */ new Set(), listProps: /* @__PURE__ */ new Set() };
+    this.pinnedColors = /* @__PURE__ */ new Map();
+    this.sortCol = null;
+    this.sortDir = null;
+    this.wasResizingJustNow = false;
+    this.draggedProp = null;
     this.queryCtrl = controller;
     this.rootEl = parentEl.createDiv({ cls: "ntn-root" });
     this.register(() => this.closeSelectMenu());
@@ -1393,7 +1413,10 @@ var NotionTableView = class extends import_obsidian4.BasesView {
     for (const c of colors) {
       const btn = grid.createEl("button", { cls: "ntn-color-option" });
       const sq = btn.createSpan({ cls: "ntn-color-sq" });
-      applyPillColor(sq, c.name, /* @__PURE__ */ new Map([[c.name.toLowerCase(), c.name]]));
+      const colorObj = colorByName(c.name);
+      if (colorObj) {
+        applyColorVars(sq, colorObj);
+      }
       btn.createSpan({ text: c.label });
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -1408,7 +1431,7 @@ var NotionTableView = class extends import_obsidian4.BasesView {
         doc.removeEventListener("mousedown", closeHandler);
       }
     };
-    setTimeout(() => doc.addEventListener("mousedown", closeHandler), 50);
+    window.setTimeout(() => doc.addEventListener("mousedown", closeHandler), 50);
   }
   attachColumnDragDrop(th, propKey) {
     th.addEventListener("dragstart", (evt) => {
@@ -1432,8 +1455,9 @@ var NotionTableView = class extends import_obsidian4.BasesView {
         if (fromIdx !== -1 && toIdx !== -1) {
           currentOrder.splice(fromIdx, 1);
           currentOrder.splice(toIdx, 0, draggedProp);
-          if (typeof this.config.setOrder === "function") {
-            this.config.setOrder(currentOrder);
+          const cfg = this.config;
+          if (typeof cfg["setOrder"] === "function") {
+            cfg["setOrder"](currentOrder);
           }
           this.onDataUpdated();
         }
@@ -1460,7 +1484,7 @@ var NotionTableView = class extends import_obsidian4.BasesView {
         handle.removeClass("resizing");
         doc.removeEventListener("mousemove", onMouseMove);
         doc.removeEventListener("mouseup", onMouseUp);
-        setTimeout(() => {
+        window.setTimeout(() => {
           this.wasResizingJustNow = false;
         }, 200);
       };
@@ -1526,18 +1550,17 @@ var NotionTableView = class extends import_obsidian4.BasesView {
         roots.push(node);
       }
     }
-    const self = this;
-    function sortNodes(nodes) {
+    const sortNodes = (nodes) => {
       nodes.sort((a, b) => {
-        if (self.sortCol && self.sortDir) {
+        if (this.sortCol && this.sortDir) {
           let valA = null;
           let valB = null;
-          if (self.sortCol === "title") {
+          if (this.sortCol === "title") {
             valA = a.entry.file.basename;
             valB = b.entry.file.basename;
           } else {
-            valA = a.entry.getValue(self.sortCol);
-            valB = b.entry.getValue(self.sortCol);
+            valA = a.entry.getValue(this.sortCol);
+            valB = b.entry.getValue(this.sortCol);
           }
           const strA = valA !== null && valA !== void 0 ? cleanWikilinkTitle(valA).toLowerCase() : "";
           const strB = valB !== null && valB !== void 0 ? cleanWikilinkTitle(valB).toLowerCase() : "";
@@ -1550,7 +1573,7 @@ var NotionTableView = class extends import_obsidian4.BasesView {
             cmp = strA.localeCompare(strB, void 0, { numeric: true, sensitivity: "base" });
           }
           if (cmp !== 0)
-            return self.sortDir === "desc" ? -cmp : cmp;
+            return this.sortDir === "desc" ? -cmp : cmp;
         }
         const idxA = entryIndexMap.get(a.entry.file.path.toLowerCase()) ?? 999999;
         const idxB = entryIndexMap.get(b.entry.file.path.toLowerCase()) ?? 999999;
@@ -1561,7 +1584,7 @@ var NotionTableView = class extends import_obsidian4.BasesView {
           sortNodes(n.children);
         }
       }
-    }
+    };
     sortNodes(roots);
     function assignDepth(nodes, lvl) {
       for (const n of nodes) {
@@ -1678,21 +1701,24 @@ var NotionTableView = class extends import_obsidian4.BasesView {
       th.addEventListener("drop", (evt) => {
         evt.preventDefault();
         th.removeClass("ntn-drag-over");
-        const fromProp = this.draggedProp || evt.dataTransfer?.getData("text/plain");
+        const fromProp = this.draggedProp || (evt.dataTransfer ? evt.dataTransfer.getData("text/plain") : null);
         const toProp = prop;
         if (fromProp && toProp && fromProp !== toProp) {
           const fromIdx = displayProps.indexOf(fromProp);
           const toIdx = displayProps.indexOf(toProp);
           if (fromIdx !== -1 && toIdx !== -1) {
             const updated = [...displayProps];
-            const [removed] = updated.splice(fromIdx, 1);
-            updated.splice(toIdx, 0, removed);
+            const removed = updated.splice(fromIdx, 1)[0];
+            if (removed) {
+              updated.splice(toIdx, 0, removed);
+            }
             this.customColumnOrder = updated;
             try {
-              if (typeof this.config.setOrder === "function") {
-                this.config.setOrder(updated);
-              } else if (typeof this.config.set === "function") {
-                this.config.set("order", updated);
+              const cfg = this.config;
+              if (typeof cfg["setOrder"] === "function") {
+                cfg["setOrder"](updated);
+              } else if (typeof cfg["set"] === "function") {
+                cfg["set"]("order", updated);
               }
             } catch (e) {
               console.debug("Bases config setOrder non-fatal fallback", e);
@@ -1721,10 +1747,8 @@ var NotionTableView = class extends import_obsidian4.BasesView {
         if (this.sortCol === "title") {
           valA = a.entry.file.basename;
           valB = b.entry.file.basename;
-        } else {
+        } else if (this.sortCol) {
           valA = a.entry.getValue(this.sortCol);
-        }
-        if (this.sortCol !== "title") {
           valB = b.entry.getValue(this.sortCol);
         }
         const strA = valA !== null && valA !== void 0 ? cleanWikilinkTitle(valA).toLowerCase() : "";
@@ -1765,13 +1789,13 @@ var NotionTableView = class extends import_obsidian4.BasesView {
     const titleWrap = titleTd.createDiv({ cls: "ntn-title-wrap" });
     if (node.level > 0) {
       const spacer = titleWrap.createSpan({ cls: "ntn-indent-spacer" });
-      spacer.style.width = `${node.level * 20}px`;
+      spacer.setCssStyles({ width: `${node.level * 20}px` });
     }
     if (node.hasChildren) {
       const toggleBtn = titleWrap.createSpan({
         cls: `ntn-toggle-btn ${isExpanded ? "expanded" : ""}`
       });
-      toggleBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>`;
+      (0, import_obsidian4.setIcon)(toggleBtn, "chevron-right");
       toggleBtn.addEventListener("click", (evt) => {
         evt.stopPropagation();
         if (this.expandedPaths.has(entry.file.path)) {
@@ -1853,7 +1877,7 @@ var NotionTableView = class extends import_obsidian4.BasesView {
     if (metaType === "date" || metaType === "datetime") {
       return true;
     }
-    const normalized = lowBare.replace(/[_\.-\s]+/g, " ");
+    const normalized = lowBare.replace(/[._\s-]+/g, " ");
     const keywords = ["date", "due", "deadline", "ctime", "mtime", "created", "completion"];
     for (const kw of keywords) {
       if (normalized === kw || normalized.startsWith(kw + " ") || normalized.endsWith(" " + kw) || normalized.includes(" " + kw + " ")) {

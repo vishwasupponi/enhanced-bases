@@ -18,17 +18,19 @@ function extractRawDateString(value: unknown): string {
 	if (typeof value === 'string') res = value.trim();
 	else if (value instanceof Date) {
 		res = formatDateObject(value);
-	} else {
-		const obj = value as any;
-		if (obj.value) {
-			if (typeof obj.value === 'string') res = obj.value.trim();
-			else if (obj.value instanceof Date) {
-				res = formatDateObject(obj.value);
+	} else if (typeof value === 'object' && value !== null) {
+		const obj = value as Record<string, unknown>;
+		const valProp = obj['value'];
+		const dateProp = obj['date'];
+		if (valProp) {
+			if (typeof valProp === 'string') res = valProp.trim();
+			else if (valProp instanceof Date) {
+				res = formatDateObject(valProp);
 			}
-		} else if (obj.date) {
-			if (typeof obj.date === 'string') res = obj.date.trim();
-			else if (obj.date instanceof Date) {
-				res = formatDateObject(obj.date);
+		} else if (dateProp) {
+			if (typeof dateProp === 'string') res = dateProp.trim();
+			else if (dateProp instanceof Date) {
+				res = formatDateObject(dateProp);
 			}
 		} else if (typeof obj.toString === 'function') {
 			const s = obj.toString().trim();
@@ -36,16 +38,25 @@ function extractRawDateString(value: unknown): string {
 		} else {
 			res = String(value).trim();
 		}
+	} else {
+		res = String(value).trim();
 	}
 	return (res === 'null' || res === 'undefined') ? '' : res;
 }
 
 
-function cleanWikilinkTitle(val: any): string {
+function cleanWikilinkTitle(val: unknown): string {
 	if (!val) return '';
-	const str = typeof val === 'string' ? val : (val.toString ? val.toString() : String(val));
+	let str = '';
+	if (typeof val === 'string') {
+		str = val;
+	} else if (typeof val === 'object' && val !== null && 'toString' in val && typeof (val as { toString: () => string }).toString === 'function') {
+		str = (val as { toString: () => string }).toString();
+	} else {
+		str = String(val);
+	}
 	if (!str) return '';
-	return str.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, target, alias) => {
+	return str.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_: string, target: string, alias?: string): string => {
 		if (alias && alias.trim()) return alias.trim();
 		const t = target.trim();
 		const lastSlash = t.lastIndexOf('/');
@@ -66,14 +77,14 @@ import {
 	BasesView,
 	BooleanValue,
 	Notice,
-	Menu,
 	NumberValue,
 	Platform,
 	QueryController,
 	TFile,
+	setIcon,
 } from 'obsidian';
 import { LOG_PREFIX, NOTION_TABLE_VIEW } from '../constants';
-import { PinnedColors, applyPillColor, colorByName } from '../lib/colors';
+import { NotionColor, PinnedColors, applyColorVars, applyPillColor, colorByName } from '../lib/colors';
 import { PillDetection, computePillProps, parsePinnedColors } from '../lib/pills';
 import { valueToStrings } from '../lib/values';
 import { NotePageModal, OpenSelectOpts } from './note-modal';
@@ -106,6 +117,8 @@ class ObsidianNativeDatePicker {
 	private selectedPeriod: 'AM' | 'PM';
 	private popover: HTMLElement | null = null;
 	private showMonthYearSelector: boolean = false;
+	private onOutsideHandler?: (e: MouseEvent) => void;
+	private onKeydownHandler?: (e: KeyboardEvent) => void;
 
 	private anchorRect: DOMRect;
 
@@ -312,7 +325,7 @@ class ObsidianNativeDatePicker {
 				});
 			}
 			if (selectedYearEl) {
-				setTimeout(() => selectedYearEl?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 30);
+				window.setTimeout(() => selectedYearEl?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 30);
 			}
 		} else {
 			// Standard 7-Days Header & 7x6 Grid
@@ -435,65 +448,24 @@ class ObsidianNativeDatePicker {
 			}
 		};
 
-		setTimeout(() => {
+		window.setTimeout(() => {
 			this.doc.addEventListener('mousedown', onOutside);
 			this.doc.addEventListener('keydown', onKeydown);
 		}, 50);
 
 		// Store listeners for teardown
-		(this as any)._onOutside = onOutside;
-		(this as any)._onKeydown = onKeydown;
+		this.onOutsideHandler = onOutside;
+		this.onKeydownHandler = onKeydown;
 	}
 
 	public close() {
 		if (this.popover) {
-			if ((this as any)._onOutside) this.doc.removeEventListener('mousedown', (this as any)._onOutside);
-			if ((this as any)._onKeydown) this.doc.removeEventListener('keydown', (this as any)._onKeydown);
+			if (this.onOutsideHandler) this.doc.removeEventListener('mousedown', this.onOutsideHandler);
+			if (this.onKeydownHandler) this.doc.removeEventListener('keydown', this.onKeydownHandler);
 			this.popover.remove();
 		}
 	}
 }
-
-/**
- * The `notion-table` Bases view: renders query results as a Notion-style table
- * with hover OPEN buttons, colored pills, inline editing, and a select editor
- * for pill cells. Re-renders from scratch on every `onDataUpdated`.
- */
-import {
-	BasesEntry,
-	BasesPropertyId,
-	BasesView,
-	BooleanValue,
-	Notice,
-	NumberValue,
-	Platform,
-	QueryController,
-	TFile,
-} from 'obsidian';
-import { LOG_PREFIX, NOTION_TABLE_VIEW } from '../constants';
-import { PinnedColors, applyPillColor, colorByName } from '../lib/colors';
-import { PillDetection, computePillProps, parsePinnedColors } from '../lib/pills';
-import { valueToStrings } from '../lib/values';
-import { NotePageModal, OpenSelectOpts } from './note-modal';
-import { SelectEditor } from './select-editor';
-
-/**
- * Internal shape of the core toolbar's new-item menu (`QueryController.
- * newItemMenu` — not in the public API). Guarded at runtime before use.
- */
-interface CoreNewItemMenu {
-	open(name?: string, frontmatterProcessor?: (fm: Record<string, unknown>) => void): Promise<void>;
-	close(): void;
-}
-
-
-interface EntryHierarchyNode {
-	entry: BasesEntry;
-	children: EntryHierarchyNode[];
-	level: number;
-	hasChildren: boolean;
-}
-
 
 export class NotionTableView extends BasesView {
 	private columnWidths: Map<string, number> = new Map();
@@ -505,6 +477,14 @@ export class NotionTableView extends BasesView {
 	private readonly queryCtrl: QueryController;
 	/** True while the toolbar's New button is rerouted to the page panel. */
 	private newButtonPatched = false;
+	private customColumnOrder?: BasesPropertyId[];
+	private selectEditor: SelectEditor | null = null;
+	private pills: PillDetection = { pillProps: new Set(), listProps: new Set() };
+	private pinnedColors: PinnedColors = new Map();
+	private sortCol: BasesPropertyId | 'title' | null = null;
+	private sortDir: 'asc' | 'desc' | null = null;
+	private wasResizingJustNow = false;
+	private draggedProp: BasesPropertyId | null = null;
 
 
 	constructor(controller: QueryController, parentEl: HTMLElement) {
@@ -616,7 +596,10 @@ export class NotionTableView extends BasesView {
 		for (const c of colors) {
 			const btn = grid.createEl('button', { cls: 'ntn-color-option' });
 			const sq = btn.createSpan({ cls: 'ntn-color-sq' });
-			applyPillColor(sq, c.name, new Map([[c.name.toLowerCase(), c.name]]));
+			const colorObj = colorByName(c.name);
+			if (colorObj) {
+				applyColorVars(sq, colorObj);
+			}
 			btn.createSpan({ text: c.label });
 			btn.addEventListener('click', (e) => {
 				e.stopPropagation();
@@ -632,7 +615,7 @@ export class NotionTableView extends BasesView {
 				doc.removeEventListener('mousedown', closeHandler);
 			}
 		};
-		setTimeout(() => doc.addEventListener('mousedown', closeHandler), 50);
+		window.setTimeout(() => doc.addEventListener('mousedown', closeHandler), 50);
 	}
 
 	
@@ -659,8 +642,9 @@ export class NotionTableView extends BasesView {
 				if (fromIdx !== -1 && toIdx !== -1) {
 					currentOrder.splice(fromIdx, 1);
 					currentOrder.splice(toIdx, 0, draggedProp);
-					if (typeof (this.config as any).setOrder === 'function') {
-						(this.config as any).setOrder(currentOrder);
+					const cfg = this.config as unknown as Record<string, unknown>;
+					if (typeof cfg['setOrder'] === 'function') {
+						(cfg['setOrder'] as (order: BasesPropertyId[]) => void)(currentOrder);
 					}
 					this.onDataUpdated();
 				}
@@ -690,7 +674,7 @@ export class NotionTableView extends BasesView {
 				handle.removeClass('resizing');
 				doc.removeEventListener('mousemove', onMouseMove);
 				doc.removeEventListener('mouseup', onMouseUp);
-				setTimeout(() => {
+				window.setTimeout(() => {
 					this.wasResizingJustNow = false;
 				}, 200);
 			};
@@ -726,7 +710,7 @@ export class NotionTableView extends BasesView {
 
 		for (const node of nodeMap.values()) {
 			const fm = (this.app.metadataCache.getFileCache(node.entry.file)?.frontmatter || {}) as Record<string, unknown>;
-			let rawParent: any = null;
+			let rawParent: unknown = null;
 
 			if (userParentProp) {
 				for (const k of Object.keys(fm)) {
@@ -769,18 +753,17 @@ export class NotionTableView extends BasesView {
 			}
 		}
 
-		const self = this;
-		function sortNodes(nodes: EntryHierarchyNode[]) {
+		const sortNodes = (nodes: EntryHierarchyNode[]): void => {
 			nodes.sort((a, b) => {
-				if (self.sortCol && self.sortDir) {
-					let valA: any = null;
-					let valB: any = null;
-					if (self.sortCol === 'title') {
+				if (this.sortCol && this.sortDir) {
+					let valA: unknown = null;
+					let valB: unknown = null;
+					if (this.sortCol === 'title') {
 						valA = a.entry.file.basename;
 						valB = b.entry.file.basename;
 					} else {
-						valA = a.entry.getValue(self.sortCol);
-						valB = b.entry.getValue(self.sortCol);
+						valA = a.entry.getValue(this.sortCol);
+						valB = b.entry.getValue(this.sortCol);
 					}
 					const strA = valA !== null && valA !== undefined ? cleanWikilinkTitle(valA).toLowerCase() : '';
 					const strB = valB !== null && valB !== undefined ? cleanWikilinkTitle(valB).toLowerCase() : '';
@@ -792,7 +775,7 @@ export class NotionTableView extends BasesView {
 					} else {
 						cmp = strA.localeCompare(strB, undefined, { numeric: true, sensitivity: 'base' });
 					}
-					if (cmp !== 0) return self.sortDir === 'desc' ? -cmp : cmp;
+					if (cmp !== 0) return this.sortDir === 'desc' ? -cmp : cmp;
 				}
 				const idxA = entryIndexMap.get(a.entry.file.path.toLowerCase()) ?? 999999;
 				const idxB = entryIndexMap.get(b.entry.file.path.toLowerCase()) ?? 999999;
@@ -803,7 +786,7 @@ export class NotionTableView extends BasesView {
 					sortNodes(n.children);
 				}
 			}
-		}
+		};
 
 		sortNodes(roots);
 
@@ -839,7 +822,7 @@ export class NotionTableView extends BasesView {
 
 		const rawProps = this.customColumnOrder || this.config.getOrder();
 		// Filter out file.name / note.name property from extra columns to prevent duplicate 'Name' / 'Game' columns
-		const displayProps = rawProps.filter((p) => {
+		const displayProps = rawProps.filter((p: BasesPropertyId) => {
 			const bare = p.split('.').slice(1).join('.').toLowerCase();
 			return p !== 'file.name' && p !== 'file.basename' && p !== 'note.name' && bare !== 'file.name';
 		});
@@ -943,23 +926,26 @@ export class NotionTableView extends BasesView {
 			th.addEventListener('drop', (evt: DragEvent) => {
 				evt.preventDefault();
 				th.removeClass('ntn-drag-over');
-				const fromProp = this.draggedProp || evt.dataTransfer?.getData('text/plain');
+				const fromProp = this.draggedProp || (evt.dataTransfer ? evt.dataTransfer.getData('text/plain') as BasesPropertyId : null);
 				const toProp = prop;
 				if (fromProp && toProp && fromProp !== toProp) {
 					const fromIdx = displayProps.indexOf(fromProp as BasesPropertyId);
 					const toIdx = displayProps.indexOf(toProp);
 					if (fromIdx !== -1 && toIdx !== -1) {
 						const updated = [...displayProps];
-						const [removed] = updated.splice(fromIdx, 1);
-						updated.splice(toIdx, 0, removed);
+						const removed = updated.splice(fromIdx, 1)[0];
+						if (removed) {
+							updated.splice(toIdx, 0, removed);
+						}
 
 						this.customColumnOrder = updated;
 
 						try {
-							if (typeof (this.config as any).setOrder === 'function') {
-								(this.config as any).setOrder(updated);
-							} else if (typeof (this.config as any).set === 'function') {
-								(this.config as any).set('order', updated);
+							const cfg = this.config as unknown as Record<string, unknown>;
+							if (typeof cfg['setOrder'] === 'function') {
+								(cfg['setOrder'] as (order: BasesPropertyId[]) => void)(updated);
+							} else if (typeof cfg['set'] === 'function') {
+								(cfg['set'] as (key: string, val: unknown) => void)('order', updated);
 							}
 						} catch (e) {
 							console.debug('Bases config setOrder non-fatal fallback', e);
@@ -987,16 +973,14 @@ export class NotionTableView extends BasesView {
 			traverse(roots);
 			// Sort flattened nodes
 			allNodes.sort((a, b) => {
-				let valA: any = null;
-				let valB: any = null;
+				let valA: unknown = null;
+				let valB: unknown = null;
 				if (this.sortCol === 'title') {
 					valA = a.entry.file.basename;
 					valB = b.entry.file.basename;
-				} else {
-					valA = a.entry.getValue(this.sortCol!);
-				}
-				if (this.sortCol !== 'title') {
-					valB = b.entry.getValue(this.sortCol!);
+				} else if (this.sortCol) {
+					valA = a.entry.getValue(this.sortCol);
+					valB = b.entry.getValue(this.sortCol);
 				}
 				const strA = valA !== null && valA !== undefined ? cleanWikilinkTitle(valA).toLowerCase() : '';
 				const strB = valB !== null && valB !== undefined ? cleanWikilinkTitle(valB).toLowerCase() : '';
@@ -1050,7 +1034,7 @@ export class NotionTableView extends BasesView {
 		// Indentation spacer
 		if (node.level > 0) {
 			const spacer = titleWrap.createSpan({ cls: 'ntn-indent-spacer' });
-			spacer.style.width = `${node.level * 20}px`;
+			spacer.setCssStyles({ width: `${node.level * 20}px` });
 		}
 
 		// Caret Toggle Button (▶ / ▼)
@@ -1058,7 +1042,7 @@ export class NotionTableView extends BasesView {
 			const toggleBtn = titleWrap.createSpan({
 				cls: `ntn-toggle-btn ${isExpanded ? 'expanded' : ''}`
 			});
-			toggleBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>`;
+			setIcon(toggleBtn, 'chevron-right');
 			toggleBtn.addEventListener('click', (evt) => {
 				evt.stopPropagation();
 				if (this.expandedPaths.has(entry.file.path)) {
@@ -1148,7 +1132,7 @@ export class NotionTableView extends BasesView {
 		if (metaType === 'date' || metaType === 'datetime') {
 			return true;
 		}
-		const normalized = lowBare.replace(/[_\.-\s]+/g, ' ');
+		const normalized = lowBare.replace(/[._\s-]+/g, ' ');
 		const keywords = ['date', 'due', 'deadline', 'ctime', 'mtime', 'created', 'completion'];
 		for (const kw of keywords) {
 			if (normalized === kw || normalized.startsWith(kw + ' ') || normalized.endsWith(' ' + kw) || normalized.includes(' ' + kw + ' ')) {
